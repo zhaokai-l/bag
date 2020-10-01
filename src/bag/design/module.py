@@ -649,6 +649,7 @@ class Module(DesignMaster):
                 'vcvs': 'VCVS{}',
                 'vdc': 'VDC{}',
                 'vpulse': 'VPULSE{}',
+                'vsin': 'VSIN{}',
                 'vpwlf': 'VPWLF{}',
             }
         }
@@ -660,6 +661,7 @@ class Module(DesignMaster):
                 'vcvs': 'egain',
                 'vdc': 'vdc',
                 'vpulse': None,
+                'vsin': None,
                 'vpwlf': 'fileName',
             },
         }
