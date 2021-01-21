@@ -34,7 +34,7 @@ from ..util.immutable import ImmutableList
 from .data import (
     MDSweepInfo, SimData, SetSweepInfo, SweepLinear, SweepLog, SweepList, SimNetlistInfo,
     SweepSpec, MonteCarlo, AnalysisInfo, AnalysisAC, AnalysisSP, AnalysisNoise, AnalysisTran,
-    AnalysisSweep1D, AnalysisPSS
+    AnalysisSweep1D, AnalysisPSS, AnalysisPNoise, AnalysisPAC
 )
 from .base import SimProcessManager, get_corner_temp
 from .hdf5 import load_sim_data_hdf5, save_sim_data_hdf5
@@ -438,10 +438,18 @@ def _write_analysis(lines: List[str], sim_env: str, ana: AnalysisInfo, precision
                              'or set autofund = True')
         if ana.period > 0.0:
             cur_line += f' period={ana.period}'
-        if ana.fund > 0.0:
-            cur_line += f' fund={ana.fund}'
+        if ana.fund:
+            cur_line += f' fund={_format_val(ana.fund, precision)}'
         if ana.autofund:
             cur_line += f' autofund=yes'
+    elif isinstance(ana, AnalysisPNoise):
+        cur_line += (f' start={_format_val(ana.start, precision)}'
+                     f' stop={_format_val(ana.stop, precision)}')
+        event_name_list = ' '.join((f'{key}' for key, val in ana.events.items()))
+        cur_line += f' measurement=[{event_name_list}]'
+    elif isinstance(ana, AnalysisPAC):
+        cur_line += (f' start={_format_val(ana.start, precision)}'
+                     f' stop={_format_val(ana.stop, precision)}')
     else:
         raise ValueError('Unknown analysis specification.')
 
@@ -454,6 +462,9 @@ def _write_analysis(lines: List[str], sim_env: str, ana: AnalysisInfo, precision
         cur_line += ' save=selected'
 
     lines.append(cur_line)
+
+    if isinstance(ana, AnalysisPNoise):
+        [lines.append(f' {key} {val}') for key, val in ana.events.items()]
 
 
 def _write_save_statements(lines: List[str], save_outputs: Set[str]):

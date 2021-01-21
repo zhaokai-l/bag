@@ -348,15 +348,34 @@ class AnalysisPSS:
 
 
 @dataclass(eq=True, frozen=True)
-class AnalysisPAC(AnalysisAC):
+class AnalysisPAC:
+    p_port: str
+    n_port: str
+    start: float
+    stop: float
+    options: ImmutableSortedDict[str, str]
+    save_outputs: ImmutableList[str]
 
     @property
     def name(self) -> str:
         return 'pac'
 
+    @property
+    def param(self) -> str:
+        return ''
+
 
 @dataclass(eq=True, frozen=True)
-class AnalysisPNoise(AnalysisNoise):
+class AnalysisPNoise:
+    start: float
+    stop: float
+    options: ImmutableSortedDict[str, str]
+    save_outputs: ImmutableList[str]
+    events: ImmutableSortedDict[str, str]
+
+    @property
+    def param(self) -> str:
+        return ''
 
     @property
     def name(self) -> str:
@@ -394,13 +413,17 @@ def analysis_from_dict(table: Dict[str, Any]) -> AnalysisInfo:
                            ImmutableSortedDict(table.get('options', {})),
                            ImmutableList(table.get('save_outputs', [])))
     elif ana_type is AnalysisType.PAC:
-        base = AnalysisAC.from_dict(table)
-        return AnalysisPAC(base.param, base.sweep, base.options, base.save_outputs, base.freq)
+        return AnalysisPAC(table.get('p_port', ''), table.get('n_port', ''),
+                           table.get('start', 0.0), table['stop'],
+                           ImmutableSortedDict(table.get('options', {})),
+                           ImmutableList(table.get('save_outputs', [])),
+                           )
     elif ana_type is AnalysisType.PNOISE:
-        base = AnalysisAC.from_dict(table)
-        return AnalysisPNoise(base.param, base.sweep, base.options, base.save_outputs, base.freq,
-                              table.get('p_port', ''), table.get('n_port', ''),
-                              table.get('out_probe', ''), table.get('in_probe', ''))
+        return AnalysisPNoise(table.get('start', 0.0), table['stop'],
+                              ImmutableSortedDict(table.get('options', {})),
+                              ImmutableList(table.get('save_outputs', [])),
+                              ImmutableSortedDict(table.get('events', {})),
+                              )
     else:
         raise ValueError(f'Unknown analysis type: {ana_type}')
 
@@ -468,7 +491,6 @@ def netlist_info_from_dict(table: Dict[str, Any]) -> SimNetlistInfo:
         if len(val) != num_env:
             raise ValueError("Invalid env_param value.")
         env_par_dict[key] = ImmutableList(val)
-
     ana_list = [analysis_from_dict(val) for val in analyses]
 
     return SimNetlistInfo(ImmutableList(sim_envs), ImmutableList(ana_list),
