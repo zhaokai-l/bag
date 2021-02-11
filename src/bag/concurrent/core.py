@@ -228,6 +228,58 @@ class SubProcessManager:
                     await self._kill_subprocess(proc)
                     raise err
 
+    async def async_new_subprocess_sim(self,
+                                   args: Union[str, Sequence[str]],
+                                   log: str,
+                                   env: Optional[Dict[str, str]] = None,
+                                   cwd: Optional[str] = None) -> Optional[int]:
+        """A coroutine which starts a subprocess.
+
+        If this coroutine is cancelled, it will shut down the subprocess gracefully using
+        SIGTERM/SIGKILL, then raise CancelledError.
+
+        Parameters
+        ----------
+        args : Union[str, Sequence[str]]
+            command to run, as string or sequence of strings.
+        log : str
+            the log file name.
+        env : Optional[Dict[str, str]]
+            an optional dictionary of environment variables.  None to inherit from parent.
+        cwd : Optional[str]
+            the working directory.  None to inherit from parent.
+
+        Returns
+        -------
+        retcode : Optional[int]
+            the return code of the subprocess.
+        """
+        if isinstance(args, str):
+            args = [args]
+
+        # get log file name, make directory if necessary
+        log_path = Path(log).resolve()
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if cwd is not None:
+            # make sure current working directory exists
+            Path(cwd).mkdir(parents=True, exist_ok=True)
+
+        async with self._semaphore:
+            proc = None
+            with open(log_path, 'w') as logf:
+                logf.write(f'command: {" ".join(args)}\n')
+                logf.flush()
+                try:
+                    proc = await asyncio.create_subprocess_shell(' '.join(args), stdout=logf,
+                                                                 stderr=subprocess.STDOUT,
+                                                                 env=env, cwd=cwd)
+                    retcode = await proc.wait()
+                    return retcode
+                except CancelledError as err:
+                    await self._kill_subprocess(proc)
+                    raise err
+
     async def async_new_subprocess_flow(self,
                                         proc_info_list: Sequence[FlowInfo]) -> Any:
         """A coroutine which runs a series of subprocesses.

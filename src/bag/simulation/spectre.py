@@ -236,7 +236,7 @@ class SpectreInterface(SimProcessManager):
         if hdf5_path.is_file():
             hdf5_path.unlink()
 
-        ret_code = await self.manager.async_new_subprocess(sim_cmd, str(log_path),
+        ret_code = await self.manager.async_new_subprocess_sim(sim_cmd, str(log_path),
                                                            env=env, cwd=str(cwd_path))
         if ret_code is None or ret_code != 0 or not raw_path.is_dir():
             raise ValueError(f'Spectre simulation ended with error.  See log file: {log_path}')
